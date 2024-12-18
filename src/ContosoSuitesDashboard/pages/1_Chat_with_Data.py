@@ -13,8 +13,9 @@ def create_chat_completion(messages):
     # Learn more about Streamlit secrets here: https://docs.streamlit.io/develop/concepts/connections/secrets-management
     # The secrets themselves are stored in the .streamlit/secrets.toml file.
 
+    tenant_id = st.secrets["azure"]["tenant_id"]
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
+        DefaultAzureCredential(visual_studio_code_tenant_id=tenant_id), "https://cognitiveservices.azure.com/.default"
     )
     
     # credential = DefaultAzureCredential()
@@ -24,6 +25,7 @@ def create_chat_completion(messages):
     aoai_deployment_name = st.secrets["aoai"]["deployment_name"]
     search_endpoint = st.secrets["search"]["endpoint"]
     search_index_name = st.secrets["search"]["index_name"]
+    search_key = st.secrets["search"]["key"]
 
     client = openai.AzureOpenAI(
         azure_ad_token_provider=token_provider,
@@ -41,13 +43,13 @@ def create_chat_completion(messages):
         extra_body={
             "data_sources": [
                 {
-                    "type": "AzureSearch",
+                    "type": "azure_search",
                     "parameters": {
                         "endpoint": search_endpoint,
                         "index_name": search_index_name,
                         "authentication": {
-                            "type": "AzureActiveDirectory",
-                            "token_provider": token_provider
+                            "type": "api_key",
+                            "key": search_key
                         }
                     }
                 }
