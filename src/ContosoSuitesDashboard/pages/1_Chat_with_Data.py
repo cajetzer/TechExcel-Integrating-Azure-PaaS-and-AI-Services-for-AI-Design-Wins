@@ -1,8 +1,34 @@
 import streamlit as st
 import openai
+import requests
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 st.set_page_config(layout="wide")
+
+# def query_azure_search(query):
+#     """Query the Azure AI Search index and return the results."""
+#     search_endpoint = st.secrets["search"]["endpoint"]
+#     search_index = st.secrets["search"]["index_name"]
+#     api_key = st.secrets["search"]["key"]
+
+#     headers = {
+#         "Content-Type": "application/json",
+#         "api-key": api_key
+#     }
+#     search_url = f"{search_endpoint}/indexes/{search_index}/search?api-version=2021-04-30-Preview"
+#     payload = {
+#         "search": query,
+#         "top": 5,  # Limit the number of results
+#         "queryType": "simple",
+#         "select": "content"  # Adjust fields as needed
+#     }
+
+#     response = requests.post(search_url, headers=headers, json=payload)
+#     response.raise_for_status()
+#     results = response.json()
+
+#     # Extract relevant content from search results
+#     return [doc["content"] for doc in results.get("value", [])]
 
 def create_chat_completion(messages):
     """Create and return a new chat completion request. Key assumptions:
@@ -19,6 +45,10 @@ def create_chat_completion(messages):
     
     aoai_endpoint = st.secrets["aoai"]["endpoint"]
     aoai_deployment_name = st.secrets["aoai"]["deployment_name"]
+    search_endpoint = st.secrets["search"]["endpoint"]
+    search_key = st.secrets["search"]["key"]
+    search_index_name = st.secrets["search"]["index_name"]
+
 
     client = openai.AzureOpenAI(
         azure_ad_token_provider=token_provider,
@@ -32,7 +62,22 @@ def create_chat_completion(messages):
             {"role": m["role"], "content": m["content"]}
             for m in messages
         ],
-        stream=True
+        stream=True,
+        extra_body={
+            "data_sources": [
+                {
+                    "type": "azure_search",
+                    "parameters": {
+                        "index_name": search_index_name,
+                        "endpoint": search_endpoint,
+                        "authentication": {
+                            "type": "api_key",
+                            "key": search_key
+                        },
+                    }
+                }
+            ]
+        }
     )
 
 def handle_chat_prompt(prompt):
@@ -43,6 +88,13 @@ def handle_chat_prompt(prompt):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
+
+    # # Query Azure AI Search for relevant context
+    # search_results = query_azure_search(prompt)
+    # context = "\n".join(search_results)
+
+    # # Add search results as context to the chat messages
+    # st.session_state.messages.append({"role": "system", "content": f"Relevant context from Azure Search:\n{context}"})
  
     # Send the user's prompt to Azure OpenAI and display the response
     # The call to Azure OpenAI is handled in create_chat_completion()
@@ -57,6 +109,8 @@ def handle_chat_prompt(prompt):
                 message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)
     st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+
 
 def main():
     """Main function for the Chat with Data Streamlit app."""
@@ -84,3 +138,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
