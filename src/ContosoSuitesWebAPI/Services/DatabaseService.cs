@@ -77,6 +77,7 @@ public class DatabaseService(string connectionString) : IDatabaseService
         var sql = "SELECT BookingID, CustomerID, HotelID, StayBeginDate, StayEndDate, NumberOfGuests FROM dbo.Booking WHERE HotelID = @HotelID AND StayBeginDate >= @StayBeginDate";
         using var conn = new SqlConnection(
             connectionString: connectionString!
+            // connectionString: "Server=tcp:sql-tx4d3a6jvgijq.database.windows.net.database.windows.net,1433;Initial Catalog=ContosoSuitesBookings;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication='Active Directory Default';"
         );
         conn.Open();
         using var cmd = new SqlCommand(sql, conn);
